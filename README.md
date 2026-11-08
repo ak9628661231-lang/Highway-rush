@@ -23,8 +23,7 @@ To verify the level generator:
 npm test
 This generates ~250 levels across all tiers and validates each one is solvable by construction.
 
-Controls
-Mouse / tap
+ControlsMouse / tap
 
 Click an arrow to extract it
 Drag to pan the board
@@ -105,3 +104,5 @@ src/
     sounds.js           # WebAudio-synthesized SFX (no audio files)
 test/
   smoke.mjs             # generator validation (run with `npm test`)
+Tech
+Vanilla HTML / CSS / JavaScript with native ES modules. No bundler. No framework. No external runtime dependencies. All SFX are synthesized at runtime — no audio assets shipped.
