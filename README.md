@@ -1,237 +1,107 @@
+Arrows – Puzzle Escape (Web)
+A minimalist browser puzzle. Extract every arrow from the grid without causing a collision. Pure white background. Thin black arrows. No clutter, no timers, no ads — just the puzzle.
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>Arrow Puzzle</title>
-<style>
-*{box-sizing:border-box}
-body{margin:0;background:#f4f6fb;color:#202a3b;font-family:Arial,sans-serif}
-.app{max-width:520px;margin:auto;padding:20px 16px;min-height:100dvh}
-h1{text-align:center;font-size:30px;margin:10px 0}
-.sub{text-align:center;color:#718096;margin-bottom:24px}
-.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:20px}
-.stat{background:white;border:1px solid #dce3ee;border-radius:14px;padding:12px 4px;text-align:center}
-.stat span{display:block;color:#748096;font-size:12px;margin-bottom:5px}
-.stat b{font-size:23px}
-#board{display:grid;gap:5px;background:#dce4ef;border:3px solid #dce4ef;border-radius:17px;padding:6px;touch-action:manipulation}
-.cell{position:relative;aspect-ratio:1;background:#fff;border-radius:9px;min-width:0}
-.arrow{width:100%;height:100%;border:0;border-radius:9px;background:#f8fafc;color:#3978db;font-size:clamp(23px,7vw,37px);font-weight:bold;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform .18s,opacity .18s}
-.arrow:active{transform:scale(.91)}
-.arrow.blocked{background:#ffe7e8;color:#e34e62}
-.arrow.hinted{outline:3px solid #f6b73c;background:#fff5cf}
-.arrow.gone{opacity:0;transform:translate(0,-100%)}
-#message{text-align:center;min-height:48px;padding:16px 2px;font-size:15px;color:#526176}
-.controls{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-button.action{border:0;border-radius:13px;padding:15px 5px;font-size:16px;font-weight:bold;background:#304b70;color:white}
-button.action:active{opacity:.8}
-#win{display:none;text-align:center;background:#dff8e8;color:#187644;border-radius:14px;padding:16px;margin:14px 0;font-weight:bold}
-.help{background:white;border:1px solid #dce3ee;border-radius:14px;padding:14px;line-height:1.55;font-size:14px;color:#66758b;margin-top:20px}
-</style>
-</head>
-<body>
-<div class="app">
-  <h1>➡️ Arrow Puzzle</h1>
-  <div class="sub">Clear the board one arrow at a time!</div>
+An unaffiliated fan recreation, inspired by Arrows – Puzzle Escape by Lessmore GmbH. Code is entirely original. MIT licensed.
 
-  <div class="stats">
-    <div class="stat"><span>LEVEL</span><b id="level">1</b></div>
-    <div class="stat"><span>SCORE</span><b id="score">0</b></div>
-    <div class="stat"><span>ARROWS LEFT</span><b id="left">0</b></div>
-  </div>
+How to Play
+Each arrow is a chunky shaft of connected cells with a triangular tip. Arrows can be straight or bent — a single arrow can turn 90° one or more times, snaking across the board. Tap any cell of an arrow to extract it; it slides off the board in the direction the tip points.
 
-  <div id="board"></div>
-  <div id="message">Tap an arrow with a clear path!</div>
-  <div id="win">🎉 Level complete!</div>
+An arrow can only escape if all the cells in front of its tip are clear of any other arrow's body, all the way to the edge. Because bent arrows occupy multiple rows AND columns, a single bent arrow can block several others at once. Pick a blocked arrow and you lose a heart — the blocker briefly flashes red so you can see exactly what's in the way. Lose all 3 hearts and the level resets.
 
-  <div class="controls">
-    <button class="action" id="hint">💡 Hint</button>
-    <button class="action" id="restart">↻ Restart</button>
-  </div>
+Clear the entire grid to advance.
 
-  <div class="help">
-    <b>How to play</b><br>
-    Tap an arrow to move it off the board in the direction it points.
-    If another arrow blocks its path, it cannot move.
-    Remove every arrow to win!
-  </div>
-</div>
+Run It
+npm start
+Then visit http://localhost:5173.
 
-<script>
-const board = document.getElementById("board");
-const message = document.getElementById("message");
-const win = document.getElementById("win");
+That's it — no npm install, no build step. Any static HTTP server works; the script just calls python3 -m http.server. You can also open index.html directly via file:// if your browser allows ES modules from local files.
 
-let level = 1;
-let score = 0;
-let arrows = [];
-let size = 6;
-let busy = false;
-let hinted = null;
+The dev server binds to 0.0.0.0, so other devices on the same network can also reach it at http://<your-lan-ip>:5173. On macOS, find your LAN IP with ipconfig getifaddr en0 (Wi-Fi) or en1 (wired). macOS Firewall may prompt the first time — accept it. This is plaintext HTTP with no auth; use it only on trusted networks.
 
-const dirs = [
-  {name:"R",symbol:"➜",dx:1,dy:0},
-  {name:"L",symbol:"⬅",dx:-1,dy:0},
-  {name:"D",symbol:"⬇",dx:0,dy:1},
-  {name:"U",symbol:"⬆",dx:0,dy:-1}
-];
+To verify the level generator:
 
-function key(x,y){return x+","+y}
+npm test
+This generates ~250 levels across all tiers and validates each one is solvable by construction.
 
-function occupied(x,y,list){
-  return list.some(a=>a.x===x && a.y===y);
-}
+Controls
+Mouse / tap
 
-function pathClear(a,list){
-  let x=a.x+a.dx;
-  let y=a.y+a.dy;
+Click an arrow to extract it
+Drag to pan the board
+Scroll wheel to zoom (anchored at the cursor)
+Top-left ☰ for menu (How to Play, Levels, Daily, Achievements, Settings)
+Bottom bar: Undo · Hint · Center · Restart
+Touch
 
-  while(x>=0 && x<size && y>=0 && y<size){
-    if(occupied(x,y,list)) return false;
-    x+=a.dx;
-    y+=a.dy;
-  }
-  return true;
-}
+Tap an arrow to extract
+Drag with one finger to pan
+Pinch with two fingers to zoom (also pans simultaneously)
+Long-press anywhere on the board for a hint
+Keyboard
 
-/* Har puzzle ka solution generation ke samay hi tay hota hai.
-   Naya arrow tabhi add hota hai jab uska exit path khula ho.
-   Isliye arrows ko ulte creation order mein nikalna hamesha
-   ek valid solution hota hai. */
-function makePuzzle(){
-  size=6;
-  arrows=[];
-  hinted=null;
-  busy=false;
+H — hint
+R — restart level
+U or Ctrl/⌘+Z — undo
+Space — recenter view
++ / - — zoom in / out
+← / → — previous / next level
+Esc — close the topmost overlay
+Difficulty Tiers
+Levels are seeded, so everyone gets the same Level N. Difficulty scales smoothly within and across tiers — every generated level is solvable by construction.
 
-  const target=Math.min(12+(level-1)*2,30);
-  let attempts=0;
+Tier	Levels	Grid	Arrows	Lengths	Bends
+Easy	1–200	20×20	14–26	1–7, mostly 3	mostly straight
+Medium	201–400	22×22	26–46	1–8, mostly 3–4	0–3, ~40% bent
+Hard	401–600	24×24	40–68	1–8, mostly 4–5	0–4, ~65% bent
+Very Hard	601–800	26×26	55–88	1–8, mostly 4–5	0–5, ~75% bent
+Nightmare	801+	28×28	70–100	1–9, mostly 5	0–6, ~80% bent
+The board is fully pannable + zoomable, so larger grids stay tappable on any screen size.
 
-  while(arrows.length<target && attempts<10000){
-    attempts++;
-    const x=Math.floor(Math.random()*size);
-    const y=Math.floor(Math.random()*size);
+Daily Challenge
+A fresh puzzle every UTC day, the same one for every player. Difficulty rotates with the day of the week (Monday is the easiest, Sunday is Nightmare). Maintain a streak by completing each day's puzzle in sequence — miss a day and the streak resets.
 
-    if(occupied(x,y,arrows)) continue;
+Achievements
+Fifteen unlockables — first solve, level milestones, tier milestones, perfect (no-heart) clears, hint-free clears, and daily streaks. Progress + unlock dates persist locally.
 
-    const shuffled=[...dirs].sort(()=>Math.random()-.5);
-    let placed=false;
+How Levels Stay Solvable
+The generator builds levels in reverse, one arrow at a time. For each candidate it:
 
-    for(const d of shuffled){
-      const a={id:Math.random().toString(36).slice(2),
-        x,y,dx:d.dx,dy:d.dy,symbol:d.symbol,name:d.name};
+Picks a random tip cell and direction.
+Walks backward (with 0..K right-angle bends) to lay out the body.
+Accepts the arrow only if every body cell is in-bounds and unoccupied AND every cell in front of its tip is clear of any already-placed arrow.
+Because the forward-path check runs against the arrows already on the board, the most recently placed arrow always has a clear exit. Reading the placement list backward therefore yields a valid extraction sequence — proof that the level is solvable. npm test re-walks this sequence on every generated puzzle and asserts it works.
 
-      if(pathClear(a,arrows)){
-        arrows.push(a);
-        placed=true;
-        break;
-      }
-    }
-    if(!placed) continue;
-  }
-
-  render();
-  message.textContent="Find a free path and tap an arrow!";
-  win.style.display="none";
-}
-
-function render(){
-  board.style.gridTemplateColumns=`repeat(${size},minmax(0,1fr))`;
-  board.innerHTML="";
-
-  const cells=new Map();
-  arrows.forEach(a=>cells.set(key(a.x,a.y),a));
-
-  for(let y=0;y<size;y++){
-    for(let x=0;x<size;x++){
-      const cell=document.createElement("div");
-      cell.className="cell";
-
-      const a=cells.get(key(x,y));
-      if(a){
-        const btn=document.createElement("button");
-        btn.className="arrow";
-        btn.textContent=a.symbol;
-        btn.setAttribute("aria-label","Arrow "+a.name);
-
-        if(!pathClear(a,arrows)) btn.classList.add("blocked");
-        if(hinted===a.id) btn.classList.add("hinted");
-
-        btn.onclick=()=>tapArrow(a.id);
-        cell.appendChild(btn);
-      }
-      board.appendChild(cell);
-    }
-  }
-
-  document.getElementById("level").textContent=level;
-  document.getElementById("score").textContent=score;
-  document.getElementById("left").textContent=arrows.length;
-}
-
-function tapArrow(id){
-  if(busy) return;
-
-  const a=arrows.find(item=>item.id===id);
-  if(!a) return;
-
-  if(!pathClear(a,arrows)){
-    message.textContent="🚧 Blocked! Remove the arrow in its path first.";
-    const btn=[...board.querySelectorAll(".arrow")]
-      .find(b=>b.getAttribute("aria-label")==="Arrow "+a.name);
-    if(btn){
-      btn.animate(
-        [{transform:"translateX(-4px)"},
-         {transform:"translateX(4px)"},
-         {transform:"translateX(0)"}],
-        {duration:180}
-      );
-    }
-    return;
-  }
-
-  arrows=arrows.filter(item=>item.id!==id);
-  score+=10;
-  hinted=null;
-  render();
-  message.textContent="Nice move! +10 points";
-
-  if(arrows.length===0){
-    busy=true;
-    win.style.display="block";
-    message.textContent="You cleared every arrow!";
-    win.textContent="🎉 Level "+level+" complete!";
-
-    const next=document.createElement("button");
-    next.className="action";
-    next.textContent="Next Level ➜";
-    next.style.width="100%";
-    next.style.marginTop="12px";
-    next.onclick=()=>{
-      level++;
-      makePuzzle();
-      next.remove();
-    };
-    win.appendChild(next);
-  }
-}
-
-document.getElementById("hint").onclick=()=>{
-  if(busy || arrows.length===0) return;
-
-  /* Reverse creation order always gives a valid move. */
-  const a=arrows[arrows.length-1];
-  hinted=a.id;
-  render();
-  message.textContent="💡 Try the highlighted arrow!";
-};
-
-document.getElementById("restart").onclick=()=>{
-  makePuzzle();
-};
-
-makePuzzle();
-</script>
-</body>
-</html>
+Project Layout
+index.html              # markup shell (topbar, canvas, action bar, modals, drawer)
+style.css               # light + dark theme via CSS custom properties
+src/
+  main.js               # bootstrap, singletons, game flow wiring
+  config.js             # TIERS, DIRS, achievements, storage keys, constants
+  persist.js            # namespaced localStorage with packed-bit completion bitmap
+  engine/
+    rng.js              # mulberry32 + weighted/shuffle helpers
+    arrow.js            # arrow geometry helpers
+    generator.js        # seeded reverse-construction level generator
+    rules.js            # extraction validation + blocker detection
+    state.js            # game state + reducers (tap, undo, restart)
+    hint.js             # finds an extractable arrow
+  render/
+    loop.js             # rAF scheduler with dirty-flag + DPR sizing
+    viewport.js         # pan/zoom math, screen <-> cell conversion
+    canvas.js           # grid dots, arrow shafts, triangular tips, hint glow
+    animations.js       # extract fly-out, block flash, wiggle, win flourish
+  input/
+    pointer.js          # tap / drag-pan / pinch-zoom / wheel-zoom / long-press
+    keyboard.js         # global hotkeys
+  ui/
+    topbar.js           # level label, tier badge, hearts, progress bar
+    actions.js          # Undo · Hint · Center · Restart wiring
+    drawer.js           # left side drawer (stats, nav, settings toggles)
+    modals.js           # generic modal open/close, toast, win card
+    levels.js           # paginated level select with tier tabs
+    achievements.js     # achievement grid + unlock evaluation
+    daily.js            # daily challenge key + streak rollover
+  audio/
+    sounds.js           # WebAudio-synthesized SFX (no audio files)
+test/
+  smoke.mjs             # generator validation (run with `npm test`)
